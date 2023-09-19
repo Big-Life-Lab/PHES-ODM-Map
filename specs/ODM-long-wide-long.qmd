@@ -1,0 +1,124 @@
+# ODM Long-to-Wide and Wide-to-Long
+
+This document describes all operations required for mapping from ODM long format to ODM wide format and vice versa. Documentation describing in detail how to map between long and wide formats, along with examples, is available at [Long-format, wide-format, and wide-names](https://docs.phes-odm.org/wide-names.html).
+
+# ODM Long to ODM Wide
+
+## Cardinality
+
+Typically, going from long to wide format we would transform multiple rows in the long table to a single row in the wide table (ie. many-to-one).
+
+## Grouping
+
+Rows in the long table should be grouped together for processing. For example, we may want to group all rows with the same `date`. Once this grouping has been performed, we transform the entire group into a single wide format row containing all the data in the group. While this is generally many-to-one, we should allow the possibility of many-to-many.
+
+## Operations
+
+### Copying Columns
+
+In some cases we would simply copy a value from the long table rows to a single column in the wide table row. For example, we might copy the `date` from the long table rows to `mr_reportDate` in the wide table row.
+
+### Forming New Columns
+
+New columns can be synthesized in the wide table. We typically create one new column per row in the group (although we could create multiple new columns per row if required). The new column names can be constructed by combining one or more values in each row of the group. For example, if we have a row in the group where `compartment` is `water`, `specimen` is `sample`, and `value` is `10`, we could construct a new column named `wa_sa_value` and assign it the value `10` (where we use configurable string maps to map `water` onto `wa` and `sample` onto `sa`).
+
+In some cases a value might not be embedded in the heading name itself, but rather in a separate column. For example, in the wide table, the `compartment` might be stored in its own column. This would be specified by using the wide column name `hCo_sa_value` and having a separate wide column `compartment` where the value is `water`. This is done when several wide-column names share the same `compartment`, so rather than repeating it in multiple wide-column names we store it once in a single `compartment` column.
+
+### Merging Columns
+
+Merging columns involves merging the names of long format columns as well as merging the values for those columns. For example, a table with a `collectionPeriod` column with a value of `24` and a `collectionNumber` column with a value of `12` can be merged into a single wide format column `sm_2_AND_collPer_collNum` with a merged value of `24.12`.
+
+## Example
+
+Original Long Table:
+| date          | compartment | specimen | fraction analysed | measure       | unit              | aggregation     | index | value |
+|---------------|-------------|----------|-------------------|---------------|-------------------|-----------------|-------|-------|
+| Sept 18, 2023 | water       | sample   | liquid            | SARS-CoV-2-N1 | gene copies per L | arithmetic mean | 1     | 40    |
+| Sept 18, 2023 | water       | sample   | liquid            | PMMoV         | gene copies per L | arithmetic mean | 1     | 45    |
+| Sept 18, 2023 | water       | sample   | liquid            | pH            | unitless          | arithmetic mean | 1     | 6.1   |
+| Sept 19, 2023 | water       | sample   | liquid            | SARS-CoV-2-N1 | gene copies per L | arithmetic mean | 1     | 41    |
+| Sept 19, 2023 | water       | sample   | liquid            | PMMoV         | gene copies per L | arithmetic mean | 1     | 47    |
+
+Group 1 (by date):
+
+| date          | compartment | specimen | fraction analysed | measure       | unit              | aggregation     | index | value |
+|---------------|-------------|----------|-------------------|---------------|-------------------|-----------------|-------|-------|
+| Sept 18, 2023 | water       | sample   | liquid            | SARS-CoV-2-N1 | gene copies per L | arithmetic mean | 1     | 40    |
+| Sept 18, 2023 | water       | sample   | liquid            | PMMoV         | gene copies per L | arithmetic mean | 1     | 45    |
+| Sept 18, 2023 | water       | sample   | liquid            | pH            | unitless          | arithmetic mean | 1     | 6.1   |
+
+For the first row, we can copy the `date` (`Sept 18, 2023`) to the new `mr_reportDate` column (while at the same time transforming it to the correct date format):
+
+| mr_reportDate |
+|---------------|
+| 2023-09-18    |
+
+For each row, we create a new column, based on the values for `compartment`, `specimen`, `fraction analyzed`, `measure`, `unit`, `aggregation`, and `index`. We assign the value under `value` to this new column:
+
+| mr_reportDate | wat_sa_liq_covN1_gcL_me_1_value |
+|---------------|---------------------------------|
+| 2023-09-18    | 40                              |
+
+We repeat this for row 2 and 3 to get:
+
+| mr_reportDate | wat_sa_liq_covN1_gcL_me_1_value | wat_sa_liq_pmmov_gcL_me_1_value | wat_sa_liq_ph_unitless_me_1_value |
+|---------------|---------------------------------|---------------------------------|-----------------------------------|
+| 2023-09-18    | 40                              | 45                              | 6.1                               |
+
+Repeating the above with the `date` `Sept 19, 2023`, we would get a second row:
+
+| mr_reportDate | wat_sa_liq_covN1_gcL_me_1_value | wat_sa_liq_pmmov_gcL_me_1_value | wat_sa_liq_ph_unitless_me_1_value |
+|---------------|---------------------------------|---------------------------------|-----------------------------------|
+| 2023-09-18    | 40                              | 45                              | 6.1                               |
+| 2023-09-19    | 41                              | 47                              |                                   |
+
+# ODM Wide to ODM Long
+
+For transforming from wide format back to long format, we would need to extract the attribute values from the wide-format column names.
+
+## Cardinality
+
+Typically, we would transform a single row in the wide table to multiple rows in the long table. We would typically create one new long-format row for each wide-format column.
+
+## Grouping
+
+No grouping is required for wide-to-long, as we process each row in isolation (ie. row-by-row).
+
+## Operations
+
+### Copying Columns
+
+Some values will be copied directly from the single wide table row to the same value in each of the long table rows. For example, we could copy `mr_reportDate` from the wide table row to `date` for each of the long table rows.
+
+### Expanding Columns Into Rows
+
+We can also transform a single wide format column in the wide table to an entire row in the long table. Embedded in the wide format column name we have values that can be extracted. The values stored in the column name are defined in advance. For example, we may store the `compartment` and `specimen` in the wide column name, with the format `{compartment}_{specimen}_value`. In this case, the wide-format column named `wa_sa_value` (which has, for example, a value of `10`) has the value `water` (`wa`) for the new `compartment` column and the value `sample` (`sa`) for the new `specimen` column.  Finally, the column `value` in the long table row would be assigned the value `10`.
+
+In some cases, rather than having a value stored in the wide column name it may have been stored in a separate column. For example, if instead of `wa_sa_value` we had `hCo_sa_value`, the `hCo` specifies that the compartment is stored in a separate `compartment` column, in this case with the value `water`. In such a case, we would typically simply copy the value in the `compartment` column of the wide table to the `compartment` column in the long table.
+
+### Expanding Columns Into Multiple Columns
+
+Sometimes a column in the wide format contains a value that is the merging of two values. For example, a column named `sm_2_AND_collPer_collNum` with a value of `24.12` would expand to the long format column `collectionPeriod` with a value of `24` and the long format column `collectionNumber` with a value of `12`.
+
+## Example
+
+This example is the reverse of the example given in the Long to Wide documentation above.
+
+Given the wide table:
+| mr_reportDate | wat_sa_liq_covN1_gcL_me_1_value | wat_sa_liq_pmmov_gcL_me_1_value | wat_sa_liq_ph_unitless_me_1_value |
+|---------------|---------------------------------|---------------------------------|-----------------------------------|
+| 2023-09-18    | 40                              | 45                              | 6.1                               |
+
+We can take the column `wat_sa_liq_covN1_gcL_me_1_value` and expand it into a row. By definition, this column name is in the format `{compartment}_{specimen}_{fraction analyzed}_{measure}_{unit}_{aggregation}_{index}_{attribute}`. We also copy `mr_reportDate` to the new `date` column:
+
+| date          | compartment | specimen | fraction analysed | measure       | unit              | aggregation     | index | value |
+|---------------|-------------|----------|-------------------|---------------|-------------------|-----------------|-------|-------|
+| Sept 18, 2023 | water       | sample   | liquid            | SARS-CoV-2-N1 | gene copies per L | arithmetic mean | 1     | 40    |
+
+We can also take the column `wat_sa_liq_pmmov_gcL_me_1_value` and `wat_sa_liq_ph_unitless_me_1_value` and expand them into two new long format rows:
+
+| date          | compartment | specimen | fraction analysed | measure       | unit              | aggregation     | index | value |
+|---------------|-------------|----------|-------------------|---------------|-------------------|-----------------|-------|-------|
+| Sept 18, 2023 | water       | sample   | liquid            | SARS-CoV-2-N1 | gene copies per L | arithmetic mean | 1     | 40    |
+| Sept 18, 2023 | water       | sample   | liquid            | PMMoV         | gene copies per L | arithmetic mean | 1     | 45    |
+| Sept 18, 2023 | water       | sample   | liquid            | pH            | unitless          | arithmetic mean | 1     | 6.1   |
