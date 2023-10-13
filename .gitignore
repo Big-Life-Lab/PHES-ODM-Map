@@ -1,5 +1,9 @@
 .DS_Store
 
+# Quarto documentation
+specs/*_files/
+specs/*.html
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
