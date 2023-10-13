@@ -1,0 +1,123 @@
+---
+toc: true
+toc-depth: 2
+---
+
+```{r}
+#| echo: false
+#| eval: true 
+#| file: ../R/docs/doc_mdtables.R
+```
+
+# Mapping Operations
+
+This document describes the various operations required for mapping between different database formats, such as between ODM long format to ODM wide format (and vice versa) and PHA4GE to ODM. Each section describes the operation with examples, and provides a list of database conversions that require the operation.
+
+1. [Grouping](#operation-grouping)
+2. [Pivot Wider](#operation-pivot-wider)
+3. [Pivot Longer](#operation-pivot-longer)
+
+This document currently accounts for the following transformations:
+
+- ODM Wide Format to ODM Long Format
+- ODM Long Format to ODM Wide Format
+
+# Operation: Grouping
+
+Grouping rows is an operation that would be performed before applying another operation. For example, we may want to group rows in a long table based on date, then feed these groups into the [Pivot Wider](#operation-pivot-wider) operation to pivot each group of rows into a single row representing all measurements for the given date. Grouping can be applied based on multiple columns. For example, we may want to group by date and compartment:
+
+```yaml
+group_by: [ date, compartment ]
+```
+
+## Usage: Grouping
+
+- ODM long format to ODM wide format (group by date)
+
+# Operation: Pivot Wider
+
+Pivoting wider converts long format rows to wide format columns. It is based on R's [pivot_wider()](https://tidyr.tidyverse.org/reference/pivot_wider.html) function in the tidyverse and is the inverse of the [Pivot Longer](#operation-pivot-longer) operation. When pivoting wider we have (in the source table) name columns and value columns. The name columns will determine the wide format column name while the value columns will determine the new column's value. Often there is just one value column, but more than one can be provided, in which case we may transform the multiple values into a single value (eg. we can concatenate the values '24' and '12' to get the single value '24.12')
+
+In the source table we first take the values within the name columns. After some possible cleaning or string mapping we combine these values with simple string concatenation (with underscore separators) giving us the new column name.
+
+For example, using the following long table group, resulting from [grouping](#operation-grouping) by date:
+
+`r mdtable_csv_file("examples/odm/measure-singledate-odmlong.csv")`
+
+We can define the name column as:
+
+```yaml
+names_from: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+names_sep: "_"
+names_suffix: "_value"
+```
+
+For the first row of the example long table above we would extract the values under the columns `compartment`, `specimen`, `fraction_analysed`, and so on (all specified in the `names_from` field). These extracted values are listed below:
+
+```txt
+(water, sample, liquid, SARS-CoV-2-N1, gene copies per L, arithmetic mean, 1)
+```
+
+We can apply some string maps or custom transforms to clean these values:
+
+```txt
+(wat, sa, liq, covN1, gcL, me, 1)
+```
+
+We then concatenate these new values with an underscore separator (specified by `names_sep`) and add the `_value` suffix (specified by `names_suffix`) to get the column name `wat_sa_liq_covN1_gcL_me_1_value`. We can also define the value column as simply:
+
+```yaml
+values_from: value
+```
+
+Resulting in the following:
+
+`r mdtable_list(list(
+    wat_sa_liq_covN1_gcL_me_1_value = 40
+))`
+
+The second row in the example table would result in the column `wat_sa_liq_pmmov_gcL_me_1_value` and the third row in the column `wat_sa_liq_ph_unitless_me_1_value`. If we also copy over the `date` column we get:
+
+`r mdtable_csv_file("examples/odm/measure-singledate-odmwide.csv")`
+
+## Usage: Pivot Wider
+
+- ODM long format to ODM wide format
+
+# Operation: Pivot Longer
+
+Pivoting longer converts a wide format column into a long format row. It is based on R's [pivot_longer()](https://tidyr.tidyverse.org/reference/pivot_longer.html) function in the tidyverse and is the inverse of the [Pivot Wider](#operation-pivot-wider) operation. When pivoting longer we take a column name in the wide table, such as `wat_sa_liq_covN1_gcL_me_1_value`, and extract the individual components from that name (eg. the first component is `compartment`, with a value of `water`). We would define this as follows:
+
+```yaml
+names_to: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+names_pattern: (.*)_(.*)_(.*)_(.*)_(.*)_(.*)_(.*)_value
+values_to: value
+```
+
+For example, taking the following wide-format table:
+
+`r mdtable_csv_file("examples/odm/measure-singledate-odmwide.csv")`
+
+We would take the first wide-name column `wat_sa_liq_covN1_gcL_me_1_value`. The regular expression for `names_pattern` applied to this column name would result in the following group of captures:
+
+```txt
+(wat, sa, liq, covN1, gcL, me, 1)
+```
+
+We can then map these to new values or perform custom transforms on them:
+
+```txt
+(water, sample, liquid, SARS-CoV-2-N1, gene copies per L, arithmetic mean, 1)
+```
+
+We then assign these components to the corresponding column names in the `names_to` field, to get the following table (with the `mr_reportDate` column copied over as well):
+
+`r mdtable_csv_file("examples/odm/measure-singledate-odmlong.csv", rows = 1)`
+
+Applying this same rule to the remaining two wide-name columns in the example, we get two more rows:
+
+`r mdtable_csv_file("examples/odm/measure-singledate-odmlong.csv")`
+
+## Usage: Pivot Longer
+
+- ODM wide format to ODM long format
