@@ -55,5 +55,5 @@ mdtable_list <- function(data, rows = NULL) {
 
 #' Convert a CSV file to a markdown table
 mdtable_csv_file <- function(file, rows = NULL) {
-  return(mdtable_dataframe(read.csv(file), rows = rows))
+  return(mdtable_dataframe(read.csv(file, fileEncoding="UTF-8-BOM"), rows = rows))
 }
