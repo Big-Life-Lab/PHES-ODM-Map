@@ -1,0 +1,54 @@
+meta:
+    title: ODM 2.0 Wide to Long
+    version: 0.0.1
+    author: Martin Wellman
+    contact: mwellman@ohri.ca
+    links: https://phes-odm.org
+    last_modified: 2023-12-18
+
+tables:
+    -   output_table: measures
+        main_inputs: measures
+        operations:
+            -   operation: pivot_longer
+                operation_config:
+                    match_column_values: ([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_value
+                    target_columns: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+                    target_value_column: value
+            -   operation: copy
+                operation_config:
+                    target_column: reportDate
+                    source_column: mr_reportDate
+        post_operations:
+            -   operation: order_columns
+                operation_config:
+                    column_order_regex: [ reportDate, compartment, specimen, fraction_analysed, measure, unit, aggregation, index, .* ]
+            -   operation: sort_rows
+                    sort_by: [ reportDate, measure, index ]
+
+    -   output_table: samples
+        main_inputs: measures
+        operations:
+            -   operation: copy
+                operation_config:
+                    target_column: saMaterial
+                    source_table: measures
+                    source_column: sm_sampleMat
+            -   operation: copy
+                operation_config:
+                    target_column: siteID
+                    source_table: measures
+                    source_column: sm_siteID
+
+    -   output_table: contacts
+        main_inputs: measures
+        operations:
+            -   operation: copy
+                operation_config:
+                    target_column: contactID
+                    source_table: measures
+                    source_column: co_contactID
+            -   operation: set
+                operation_config:
+                    target_column: [ organizationID, firstName, lastName, email ]
+                    target_value: [ ohriOrg123, Martin, Wellman, mwellman@example.org ]
