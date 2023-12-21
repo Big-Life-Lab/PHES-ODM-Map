@@ -1,151 +1,200 @@
 ---
 toc: true
 toc-depth: 2
+css: assets/styles.css
 ---
 
 ```{r, echo=FALSE, eval=TRUE, file="../R/doc_mdtables.R"}
 ```
 
-# Mapping Operations
+# Mapping operations
 
-This document describes the various operations required for mapping between different database formats, such as between ODM long format to ODM wide format (and vice versa) and PHA4GE to ODM. Each section describes the operation with examples, and provides a list of database conversions that require the operation.
+This document lists all operations allowable in a mapping configuration file. For details on the mapping configuration file see the [Mapping Configuration Files](mapping-configs.html) document.
 
-1. [Grouping](#operation-grouping)
-2. [Pivot Wider](#operation-pivot-wider)
-3. [Pivot Longer](#operation-pivot-longer)
-
-This document currently accounts for the following transformations:
-
-- ODM Wide Format to ODM Long Format
-- ODM Long Format to ODM Wide Format
-
-# Operation: Grouping
-
-Grouping rows is an operation that would be performed before applying another operation. For example, we may want to group rows in a long table based on date, then feed these groups into the [Pivot Wider](#operation-pivot-wider) operation to pivot each group of rows into a single row representing all measurements for the given date. Grouping can be applied based one one or more columns. For example, we may want to group by date:
+# copy
 
 ```yaml
-group_by: [ date ]
+operation: copy
+operation_config:
+    target_column: mr_reportDate
+    source_table: measures
+    source_column: reportDate
+    target_index: all           # 'all', int, or List[int], default: 'all'
 ```
 
-We can apply grouping by `date` on the following example data:
+The `copy` operation copies a value from a column in the source table to a column in the output table. If the output currently has more than one row the row index to copy the value to can be set with the `target_index` key, which is a 0-based index. `target_index` can also be an array of integers to specify multiple row indices to copy to. If `target_index` is not specified, or `all` is specified, then all rows are copied to. The default value is `all`.
 
-```{r, echo=FALSE}
-mdtable_csv_file("../assets/examples/odm/measure-multidate-odmlong.csv")
-```
-
-The `date` column has two dates, resulting in two groups. The first group is:
-
-```{r, echo=FALSE}
-mdtable_csv_file("../assets/examples/odm/measure-multidate-odmlong-date1.csv")
-```
-
-While the second group is:
-
-```{r, echo=FALSE}
-mdtable_csv_file("../assets/examples/odm/measure-multidate-odmlong-date2.csv")
-```
-
-
-## Usage: Grouping
-
-- ODM long format to ODM wide format (group by date)
-
-# Operation: Pivot Wider
-
-Pivoting wider converts long format rows to wide format columns. It is based on R's [pivot_wider()](https://tidyr.tidyverse.org/reference/pivot_wider.html) function in the tidyverse and is the inverse of the [Pivot Longer](#operation-pivot-longer) operation. When pivoting wider we have (in the source table) name columns and value columns. The name columns will determine the wide format column name while the value columns will determine the new column's value. Often there is just one value column, but more than one can be provided, in which case we may transform the multiple values into a single value (eg. we can concatenate the values '24' and '12' to get the single value '24.12')
-
-In the source table we first take the values within the name columns. After some possible cleaning or string mapping we combine these values with simple string concatenation (with underscore separators) giving us the new column name.
-
-For example, using the following long table group, resulting from [grouping](#operation-grouping) by date:
-
-```{r, echo=FALSE} 
-mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv")
-```
-
-We can define the name column as:
+To avoid having to enter many separate `copy` operations, multiple `copy` operations can be specified using arrays for `target_column`, `source_table`, and `source_column`. The example below copies `samples["siteID"]` to the output's `sm_siteID` column, `samples["saMaterial"]` to the output's `sm_sampleMat` column, and `contacts["contactID"]` to the output's `co_contactID` column:
 
 ```yaml
-names_from: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
-names_sep: "_"
-names_suffix: "_value"
+operation: copy
+operation_config:
+    target_column: [ sm_siteID, sm_sampleMat, co_contactID ]
+    source_table: [ samples, samples, contacts ]
+    source_column: [ siteID, saMaterial, contactID ]
 ```
 
-For the first row of the example long table above we would extract the values under the columns `compartment`, `specimen`, `fraction_analysed`, and so on (all specified in the `names_from` field). These extracted values are listed below:
+If multiple output rows exist, then the `copy` operation will cycle through the values in the input rows for each subsequent output row. This ensures that we maintain the property that output row i corresponds to input row i mod n (i % n), where n is the number of input rows.
 
-```txt
-(water, sample, liquid, SARS-CoV-2-N1, gene copies per L, arithmetic mean, 1)
-```
-
-We can apply some string maps or custom transforms to clean these values:
-
-```txt
-(wat, sa, liq, covN1, gcL, me, 1)
-```
-
-We then concatenate these new values with an underscore separator (specified by `names_sep`) and add the `_value` suffix (specified by `names_suffix`) to get the column name `wat_sa_liq_covN1_gcL_me_1_value`. We can also define the value column as simply:
+# order_columns
 
 ```yaml
-values_from: value
+operation: order_columns
+operation_config:
+    column_order_regex: [ mr_reportDate, sm_siteID, sm_sampleMat, co_contactID, compartment, specimen, fraction_analysed, measure, unit, aggregation, index, .* ]
 ```
 
-Resulting in the following:
+The `order_columns` operation reorders the columns in the output table. The list of strings `column_order_regex` specifies the order of the columns. These are regular expressions that are applied to all columns. Full matches must occur in order for a regular expression to match a column name.
+
+If an exact match occurs (eg. the column `mr_reportDate` matching the regular expression `mr_reportDate`) then the column is placed in the index position of that match. Otherwise, if no exact match occurs then the index position of a wildcard match is used. If multiple columns match a wildcard then those columns are sorted alphabetically for consistency. If no match occurs then the column is placed at the end. For example, if a table has a column `mr_reportDate`, `mr_specimen`, `mr_aggregation`, and `sm_sampleMat`, and the following configuration is used:
+
+```yaml
+operation: order_columns
+operation_config:
+    column_order_regex: [ mr_specimen, mr_.*, mr_aggregation ]
+```
+
+Then the columns will be reordered so that `mr_specimen` is first, `mr_reportDate` is second, `mr_aggregation` is third, and `sm_sampleMat` is last.
+
+# pivot_longer
+
+```yaml
+operation: pivot_longer
+operation_config:
+    match_column_values: ([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_value
+    match_skip_values: [ hCr, hSp, hFr, hMr, hUn, [ hAg, hAG ], hIn ]
+    target_columns: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+    target_value_column: value
+    source_table: measures
+```
+
+The `pivot_longer` operation pivots individual input columns into individual output rows. It is the inverse of the `pivot_wider` operation.
+
+From the input rows (of the input table specified by `source_table`) `pivot_longer` finds any column that fully matches the regular expression specified in `match_column_values`. The regular expression must match the full column name, not just a part of it. It then takes the captures in the regular expression and assigns them to the columns (in order) specified in `target_columns`. In the `target_columns` field a value of `NULL` can be used if that capture should be ignored.  It also takes the value in the input table found in the matched column and assigns it to the column specified in `target_value_column`. Using the input row below as an example:
 
 ```{r, echo=FALSE} 
 mdtable_list(list(
-    wat_sa_liq_covN1_gcL_me_1_value = "40"
+    date = "2024-12-01",
+    wat_sa_liq_covN1_gcL_me_1_value = "40",
+    wat_sa_liq_pmmov_gcL_me_1_value = "45",
+    wat_sa_liq_ph_unitless_me_1_value = "6.1"
 ))
 ```
 
-The second row in the example table would result in the column `wat_sa_liq_pmmov_gcL_me_1_value` and the third row in the column `wat_sa_liq_ph_unitless_me_1_value`. If we also copy over the `date` column we get:
+All columns except for the `date` column match the regular expression. The first column that matches is `wat_sa_liq_covN1_gcL_me_1_value`, with the first regular expression capture being `wat`, the second `sa`, the third `liq`, and so on. Using `target_columns` to assign these captures to column values, and assigning the source value to the column specified by `target_value_column`, we obtain the following row:
 
-```{r, echo=FALSE} 
-mdtable_csv_file("../assets/examples/odm/measure-singledate-odmwide.csv")
+```{r, echo=FALSE}
+mdtable_list(list(
+    compartment = "wat",
+    specimen = "sa",
+    fraction_analysed = "liq",
+    measure = "covN1",
+    unit = "gcL",
+    aggregation = "me",
+    index = "1",
+    value = "40"
+))
 ```
 
-## Usage: Pivot Wider
+Repeating this with the other columns that match the regular expression, we obtain:
 
-- ODM long format to ODM wide format
+```{r, echo=FALSE}
+mdtable_list(list(
+    compartment = c("wat", "wat", "wat"),
+    specimen = c("sa", "sa", "sa"),
+    fraction_analysed = c("liq", "liq", "liq"),
+    measure = c("covN1", "pmmov", "ph"),
+    unit = c("gcL", "gcL", "unitless"),
+    aggregation = c("me", "me", "me"),
+    index = c("1", "1", "1"),
+    value = c("40", "45", "6.1")
+))
+```
 
-# Operation: Pivot Longer
+The `match_skip_values` field specifies values of captures that should result in skipping a pivot longer operation for a matched column. This list can have elements that are either strings or sub-lists of strings. If an element is a string then matching that string to the capture for that index will skip the operation. If an element is a sub-list then matching any of the strings in the sub-list will skip the operation. For example, in the example given at the start of this section, if the sixth capture (for `aggregation`) is either `hAg` or `hAG` then the pivot longer operation will be skipped. Use a value of `NULL` if there are no skip matches for that capture.
 
-Pivoting longer converts a wide format column into a long format row. It is based on R's [pivot_longer()](https://tidyr.tidyverse.org/reference/pivot_longer.html) function in the tidyverse and is the inverse of the [Pivot Wider](#operation-pivot-wider) operation. When pivoting longer we take a column name in the wide table, such as `wat_sa_liq_covN1_gcL_me_1_value`, and extract the individual components from that name (eg. the first component is `compartment`, with a value of `water`). We would define this as follows:
+When running `pivot_longer`, each matched column will result in populating a different output row, starting at output row index 0. If rows already exist in the output, we will populate those existing rows first, one at a time. If there are not enough output rows, then new output rows will be created. When creating the new rows the last pre-existing row in the output is broadcast down to populate any columns that are not populated by the `pivot_longer` operation (eg. if in the last pre-existing output row a `date` column is already present and has a value of `2024-12-01`, then any new row created by `pivot_longer` will also have a `date` of `2024-12-01`).
+
+When pivoting longer, once a column to pivot has been identified, we pivot all input rows in order for that particular column, appending an additional output row for each pivoted input row. Only after all input rows are pivoted for the column do we proceed to the next column for pivoting. This ensures that we maintain the property that output row i corresponds to input row i mod n (i % n), where n is the number of input rows.
+
+# pivot_wider
 
 ```yaml
-names_to: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
-names_pattern: (.*)_(.*)_(.*)_(.*)_(.*)_(.*)_(.*)_value
-values_to: value
+operation: pivot_wider
+operation_config:
+    target_column_sources: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+    target_column_separator: _
+    target_column_suffix: _value
+    source_table: measures
+    source_column: value
 ```
 
-For example, taking the following wide-format table:
+The `pivot_wider` operation pivots individual input rows into individual output columns. It is the inverse of the `pivot_longer` operation. When mapping a single input row to a column we take the values in various columns of the input row (specified by `target_column_sources`), concatenate those values together as strings to construct the new output column name (separated by `target_column_separator`), optionally append a prefix or suffix to the name (specified by `target_column_prefix` or `target_column_suffix`), and then copy over a value from the input row (in the column specified by `source_column`) to the new column.
 
-```{r, echo=FALSE} 
-mdtable_csv_file("../assets/examples/odm/measure-singledate-odmwide.csv")
+In `target_column_sources`, a dictionary value of the form `{ constant: hAg }` can be specified to use the constant string `hAg` in the column name, rather than a value retrieved from the input.
+
+Using the example configuration above and applying it to the following rows:
+
+```{r, echo=FALSE}
+mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv")
 ```
 
-We would take the first wide-name column `wat_sa_liq_covN1_gcL_me_1_value`. The regular expression for `names_pattern` applied to this column name would result in the following group of captures:
+We will first pivot the first row into a single column. The values within the columns specified by `target_column_sources` are:
 
 ```txt
 (wat, sa, liq, covN1, gcL, me, 1)
 ```
 
-We can then map these to new values or perform custom transforms on them:
+Using `target_column_separator` as the separator, we concatenate the values to obtain:
 
 ```txt
-(water, sample, liquid, SARS-CoV-2-N1, gene copies per L, arithmetic mean, 1)
+wat_sa_liq_covN1_gcL_me_1
 ```
 
-We then assign these components to the corresponding column names in the `names_to` field, to get the following table (with the `mr_reportDate` column copied over as well):
+Finally, we append the `target_column_suffix` to obtain:
+
+```txt
+wat_sa_liq_covN1_gcL_me_1_value
+```
+
+This is the column name in the output. Finally, we copy the value found in the `source_column` column of the table `source_table`, which is 40. We repeat this process for rows two and three to obtain:
 
 ```{r, echo=FALSE} 
-mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv", rows = 1)
+mdtable_list(list(
+    wat_sa_liq_covN1_gcL_me_1_value = "40",
+    wat_sa_liq_pmmov_gcL_me_1_value = "45",
+    wat_sa_liq_ph_unitless_me_1_value = "6.1"
+))
 ```
 
-Applying this same rule to the remaining two wide-name columns in the example, we get two more rows:
+# set
 
-```{r, echo=FALSE} 
-mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv")
+```yaml
+operation: set
+operation_config:
+    target_column: firstName
+    target_value: Martin
+    target_index: all           # 'all', int, or List[int], default: 'all'
 ```
 
-## Usage: Pivot Longer
+The `set` operation assigns predefined values to columns in the output rows. If the output currently has more than one row the row index to copy the value to can be set with the `target_index` key, which is a 0-based index. `target_index` can also be an array of integers to specify multiple row indices to set. If `target_index` is not specified, or `all` is specified, then all rows are set. The default value is `all`.
 
-- ODM wide format to ODM long format
+To avoid having to enter many separate `set` operations, multiple `set` operations can be specified using arrays for `target_column` and `target_value`. The example below sets the `organizationID` column in the output rows to `ohriOrg123`, `firstName` to `Martin`, `lastName` to `Wellman`, and `email` to `mwellman@example.org`:
+
+```yaml
+operation: set
+operation_config:
+    target_column: [ organizationID, firstName, lastName, email ]
+    target_value: [ ohriOrg123, Martin, Wellman, mwellman@example.org ]
+```
+
+# sort_rows
+
+```yaml
+operation: sort_rows
+operation_config:
+    sort_by: [ date, sampleID ]
+    order: ascending
+```
+
+The `sort_rows` operation sorts all rows according to one or more columns. This operation is typically performed as a post operation (in the `post_operations` key for the table, rather than with the `operations` key). It can be performed in the `operations` key but the sorting will only be performed on the current set of output rows, which is just a subset of the final output table. The configuration's `sort_by` field can be a single column name, or a list of column names to sort by. If this is a list then earlier columns take precedence in sorting. ie. We sort the whole table by the last column in the list first, and the first column in the list last.
