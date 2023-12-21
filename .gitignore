@@ -3,6 +3,8 @@
 # Quarto documentation
 specs/*_files/
 specs/*.html
+README.html
+README_files/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
