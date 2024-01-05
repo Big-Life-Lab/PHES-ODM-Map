@@ -7,7 +7,7 @@
 
 library(stringr)
 library(tibble)
-library(DT)
+library(knitr)
 
 #' Convert a dataframe or tibble to a markdown table.
 #'
@@ -23,20 +23,15 @@ mdtable_dataframe <- function(df, rows = NULL) {
     df <- df[rows, ]
 
   # Add optional word breaks after underscores, allowing headers to wrap
-  # and take up less room horizontally.
+  # and take up less room horizontally. Effectively, if a table gets too
+  # wide this will result in the addition of a horizontal scrollbar instead
+  # of trying to squish all the columns. The wide tables become harder to
+  # read for the user.
   colnames(df) <- colnames(df) %>%
     sapply(function(x) stringr::str_replace_all(x, "_", "_<wbr>"))
 
-  dt <- DT::datatable(df,
-    filter = "none",
-    rownames = FALSE,
-    escape = FALSE,
-    options = list(
-      dom = "t",
-      ordering = FALSE,
-      pageLength = nrow(df)
-    )
-  )
+  dt <- knitr::kable(df, escape = FALSE)
+
   return(dt)
 }
 
