@@ -1,4 +1,4 @@
-meta:
+metadata:
     title: ODM 2.0 Wide to Long
     version: 0.0.1
     author: Martin Wellman
@@ -7,8 +7,10 @@ meta:
     last_modified: 2023-12-18
 
 tables:
-    -   output_table: measures
-        main_inputs: measures
+    -   output_table: out_measures
+        main_inputs: 
+            input_table: measures
+            input_name: in_measures
         operations:
             -   operation: pivot_longer
                 operation_config:
@@ -27,28 +29,34 @@ tables:
                     sort_by: [ reportDate, measure, index ]
 
     -   output_table: samples
-        main_inputs: measures
+        main_inputs: in_measures
         operations:
             -   operation: copy
                 operation_config:
                     target_column: saMaterial
-                    source_table: measures
+                    source_table: in_measures
                     source_column: sm_sampleMat
             -   operation: copy
                 operation_config:
                     target_column: siteID
-                    source_table: measures
+                    source_table: in_measures
                     source_column: sm_siteID
 
     -   output_table: contacts
-        main_inputs: measures
+        main_inputs: in_measures
         operations:
             -   operation: copy
                 operation_config:
                     target_column: contactID
-                    source_table: measures
+                    source_table: in_measures
                     source_column: co_contactID
             -   operation: set
                 operation_config:
                     target_column: [ organizationID, firstName, lastName, email ]
                     target_value: [ ohriOrg123, Martin, Wellman, mwellman@example.org ]
+
+save_output:
+    -   table_name: out_measures
+        save_as: measures
+    -   samples
+    -   contacts

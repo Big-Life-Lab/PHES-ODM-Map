@@ -1,4 +1,4 @@
-meta:
+metadata:
     title: ODM 2.0 Long to Wide
     version: 0.0.1
     author: Martin Wellman
@@ -7,22 +7,23 @@ meta:
     last_modified: 2023-12-18
 
 tables:
-    -   output_table: measures
+    -   output_table: out_measures
         main_inputs:
             input_table: measures
+            input_name: in_measures
             group_by: [ date, sampleID ]
         other_inputs:
             -   input_table: samples
                 match: 
-                    # Include rows in samples table where samples["sampleID"] == measures["sampleID"]
+                    # Include rows in samples table where samples["sampleID"] == in_measures["sampleID"]
                     input_column: [ date, sampleID ]
-                    match_table: measures
+                    match_table: in_measures
                     match_column: [ date, sampleID ]
             -   input_table: contacts
                 match:
-                    # Include rows in contacts table where contacts["contactID"] == measures["contactID"]
+                    # Include rows in contacts table where contacts["contactID"] == in_measures["contactID"]
                     input_column: contactID
-                    match_table: measures
+                    match_table: in_measures
                     match_column: contactID
         operations:
             -   operation: pivot_wider
@@ -30,12 +31,12 @@ tables:
                     target_column_sources: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
                     target_column_separator: _
                     target_column_suffix: _value
-                    source_table: measures
+                    source_table: in_measures
                     source_column: value
             -   operation: copy
                 operation_config:
                     target_column: mr_reportDate
-                    source_table: measures
+                    source_table: in_measures
                     source_column: reportDate
             -   operation: copy
                 operation_config:
@@ -49,3 +50,8 @@ tables:
             -   operation: sort_rows
                 operation_config:
                     sort_by: [ mr_reportDate, sm_siteID, measure, index ]
+
+save_output:
+    output_tables:
+        -   table_name: out_measures
+            save_as: measures
