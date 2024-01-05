@@ -1,5 +1,5 @@
 date,compartment,specimen,fraction_analysed,measure,unit,aggregation,index,value
-2023-09-18,water,sample,liquid,SARS-CoV-2-N1,gene copies per L,arithmetic mean,1,40
-2023-09-18,water,sample,liquid,PMMoV,gene copies per L,arithmetic mean,1,45
-2023-09-19,water,sample,liquid,SARS-CoV-2-N1,gene copies per L,arithmetic mean,1,42
-2023-09-19,water,sample,liquid,PMMoV,gene copies per L,arithmetic mean,1,43
+2023-09-18,wat,sa,liq,covN1,gcL,me,1,40
+2023-09-18,wat,sa,liq,pmmov,gcL,me,1,45
+2023-09-19,wat,sa,liq,covN1,gcL,me,1,42
+2023-09-19,wat,sa,liq,pmmov,gcL,me,1,43
