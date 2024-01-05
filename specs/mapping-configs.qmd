@@ -1,0 +1,193 @@
+---
+title: Mapping Configuration Files
+toc: true
+toc-depth: 2
+---
+
+```{r, echo=FALSE, eval=TRUE, file="../R/doc_mdtables.R"}
+```
+
+# Introduction
+
+Mapping configuration files are YAML files that specify all the configuration options for mapping from one database format to another.
+
+The main root component of the configuration file is the `tables` key, consisting of an array of dictionaries specifying how to construct each of the output (mapped) tables. Along with the `tables` key, other root keys include `metadata` (to specify general information about the config file) and `save_output` (to specify which tables to save as the final output of the mapping).
+
+Below is an example configuration file:
+
+```{yaml, file="../assets/examples/mapping_configs/odm2_long_to_wide.yaml"}
+```
+
+# metadata
+
+The `metadata` root section provides informational details for the configuration file, such as a title, author, relevant web links, etc.
+
+```yaml
+metadata:
+    title: ODM 2.0 Long to Wide
+    version: 0.0.1
+    author: Martin Wellman
+    contact: mwellman@ohri.ca
+    links: https://phes-odm.org
+    last_modified: 2023-12-18
+```
+
+# tables
+
+The main root element in the configuration file is the `tables` key. It is an array of dictionaries, where each dictionary specifies how to construct (or map to) one output table. The `tables` dictionaries include the output table name (`output_table`), the inputs used to construct the output table (`main_inputs` and `other_inputs`), and the mapping operations performed in the construction (`operations` and `post_operations`). These dictionary elements are described below.
+
+## output_table
+
+This is the name of the output table for the mapping. It is a string. Note that to help avoid name conflicts, you can provide one name for the `output_table` during construction, then save the table as a different name in the `save_output` root key.
+
+## main_inputs
+
+```yaml
+main_inputs:
+    input_table: measures
+    group_by: [ date, sampleID ]
+```
+
+![Figure 1: Example construction of output table based on input table](assets/example_table_construction.png){fig-align="center"}
+
+`main_inputs` is the main input table for the current output table. We will iterate over the rows of this table one at a time. For each input row, we will apply all mapping operations one at a time to generate the new row(s) for the output table. When proceeding to each subsequent mapping operation, we carry forward the resulting output rows from the previous operation. This will construct the new row(s) iteratively, growing the row(s) as we proceed. Once all operations have been applied, we save the output rows and proceed to the next input row and repeat the process to generate other new rows.
+
+We can also group the rows of the main input by certain columns, such as by `date` and/or `sampleID`. By default (if no grouping is specified), each input row is considered its own group (ie. a group of size one). For a group, when iterating over the mapping operations, we pass all the rows of the group to the current mapping operation. An example of when rows should be grouped is when the table is being pivoted wider (ie. merging multiple input rows into single output rows).
+
+The YAML segment at the start of this section uses the `measures` table as the main input and groups the rows by both `date` and `sampleID`. We take the first group, pass it to all mapping operations and save the resulting output. We then proceed to the next group and repeat the process.
+
+An optional `input_name` key can be used to give the input table a different name, so that we reference it by that different name later on in the config file. For example, below we would reference the main input table as `myMeasures` throughout the configuration file, rather than as `measures`:
+
+```yaml
+main_inputs:
+    input_table: measures
+    input_name: myMeasures
+    group_by: [ date, sampleID ]
+```
+
+## other_inputs
+
+```yaml
+other_inputs:
+    -   input_table: samples
+        match: 
+            input_column: [ date, sampleID ]
+            match_table: measures
+            match_column: [ date, sampleID ]
+    -   input_table: contacts
+        match:
+            input_column: contactID
+            match_table: measures
+            match_column: contactID
+```
+
+`other_inputs` specifies all the other tables that act as inputs to the mapping operations, but they are not iterated over as with the main input table. It can be a string (a single table), or an array of strings or dictionaries. For dictionary elements we can specify filtering operations to select only specific rows from the table. For example if the main input table has a field named `contactID` that is a foreign key into the `contacts` table, we might want to select the row in the `contacts` table for that `contactID`. At each mapping operation we would pass that row into the operation, giving the operation access to additional information about the contact (eg. their first name, last name, and email address). We would typically want this filtering to result in a single row selected from the `contacts` table. This filtering is specified by the `match` key. 
+
+In the example below we are selecting row(s) from the `contacts` table that have a `contactID` that matches the ID in the `measures` table:
+
+```yaml
+-   input_table: contacts
+    match:
+        input_column: contactID
+        match_table: measures
+        match_column: contactID
+```
+
+One optional attribute of an `other_inputs` dictionary is the `input_name` key. This can help avoid name conflicts where the table name can possibly reference more than one input table. For example if the `samples` table appears in two different `other_inputs`, where in one input we filter based on `date` and in another input we filter based on `sampleID`, as below:
+
+```yaml
+other_inputs:
+    -   input_table: samples
+        input_name: samples_date
+        match: 
+            input_column: date
+            match_table: measures
+            match_column: date
+    -   input_table: samples
+        input_name: samples_sampleID
+        match: 
+            input_column: sampleID
+            match_table: measures
+            match_column: sampleID
+```
+
+## operations
+
+The operations key specifies all operations to perform on the rows of the inputs to generate the mapped table. There are various types of operations that can be performed, such as pivoting wider, pivoting longer, copying, setting, etc. Each operation is specified by a dictionary, with the operation name specified by the `operation` key and the operation-specific configuration specified by the `operation_config` key. Below is a simple example with two different operations:
+
+```yaml
+operations:
+    -   operation: pivot_wider
+        operation_config:
+            target_column: "{compartment}_{specimen}_{fraction_analysed}_{measure}_{unit}_{aggregation}_{index}_value"
+            source_table: in_measures
+            source_column: value
+            method: stack # stack | stack_no_new_rows | existing_rows
+    -   operation: copy
+        operation_config:
+            target_column: mr_reportDate
+            source_table: measures
+            source_column: reportDate
+```
+
+A full list of allowable operations is specified in the [Mapping Operations](mapping-operations.html) section.
+
+## post_operations
+
+Once an output table has been fully constructed, by passing all groups to all operations, some additional operations can be performed on the final table. These are called 'post operations'. Only a few operations can be applied as post operations. We specify these operations with the output table's `post_operations` key, whose values are in an identical format as the `operations` key.
+
+Commonly used post operations are the `sort_rows` or `order_columns` operations. These can sort the rows of the table or rearrange the columns, respectively. The example below will first sort the table's rows by 'date' and 'sampleID', then rearrange the order of the columns:
+
+```yaml
+post_operations:
+    -   operation: sort_rows
+        operation_config:
+            sort_by: [ date, sampleID ]
+            order: ascending
+    -   operation: order_columns
+        operation_config:
+            column_order_regex: [ date, sampleID, compartment, specimen, index, value ]
+```
+
+# save_output
+
+The `save_output` key specifies which tables to save as final outputs of the mapping. Tables that acted as inputs can also be saved by specifying the input table name. The example below will save the 'out_measures' table and rename it to 'measures', the 'measures' table (that acted as an input) as 'original_measures', and the 'samples' table (without renaming it).
+
+```yaml
+save_output:
+    output_tables:
+        -   table_name: out_measures
+            save_as: measures
+        -   table_name: measures
+            save_as: original_measures
+        -   samples
+```
+
+# Using Previous Outputs as Inputs
+
+Once an output table is constructed, it can be used as an input for subsequent output tables. To do this, in the `main_inputs` or `other_inputs` key, simply reference the name of the table. The below example creates an output table named 'out_measures', then creates a second output table named 'water' that uses as input the previously constructed 'out_measures' table:
+
+```yaml
+tables:
+    -   output_table: out_measures
+        main_inputs:
+            input_table: measures
+            input_name: in_measures
+        operations:
+            -   operation: pivot_wider
+                operation_config:
+                    target_column_sources: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+                    target_column_separator: _
+                    target_column_suffix: _value
+                    source_table: in_measures
+                    source_column: value
+    -   output_table: water
+        main_inputs: out_measures
+        operations:
+            -   operation: copy
+                operation_config:
+                    target_column: water_covN1_value
+                    source_table: out_measures
+                    source_column: wat_sa_liq_covN1_gcL_me_1_value
+```
+

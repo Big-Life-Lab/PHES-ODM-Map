@@ -1,0 +1,190 @@
+---
+title: Mapping Operations
+toc: true
+toc-depth: 2
+---
+
+```{r, echo=FALSE, eval=TRUE, file="../R/doc_mdtables.R"}
+```
+
+# Introduction
+
+This section lists all operations allowable in a mapping configuration file. For details on the mapping configuration file see [Mapping Configuration Files](mapping-configs.qmd). With these operations, the source or input tables only contain the rows for the current group being processed. If the `group_by` key is not specified for the `main_inputs` table, then each source/input table processed by the operations will only have one row.
+
+# copy
+
+```yaml
+operation: copy
+operation_config:
+    target_column: mr_reportDate
+    source_table: measures
+    source_column: reportDate
+    cast: None # int | float | str | date | datetime
+    method: use_source_rows # use_source_rows | exact
+```
+
+The `copy` operation will copy one or more columns from the source table to the target table, optionally format the value(s), and optionally cast it to a specified type. The `method` key specifies which source rows are used for copying. For a method of `use_source_rows`, if an intermediate output table is already created, it will use the [source row numbers](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) assigned to each of the output table rows. If an intermediate output table is not already created, it will copy all the rows from the current source table. For a method of `exact`, all source rows are copied in order, populating the output table from top to bottom and creating new rows if required.
+
+To avoid having to enter many separate `copy` operations, multiple `copy` operations can be specified using arrays for `target_column`, `source_table`, and `source_column`. The example below copies `samples["siteID"]` to the output's `sm_siteID` column, `samples["saMaterial"]` to the output's `sm_sampleMat` column, and `contacts["contactID"]` to the output's `co_contactID` column:
+
+```yaml
+operation: copy
+operation_config:
+    target_column: [ sm_siteID, sm_sampleMat, co_contactID ]
+    source_table: [ samples, samples, contacts ]
+    source_column: [ siteID, saMaterial, contactID ]
+```
+
+To combine multiple columns or to create a derived value, the `target_value` key can be used:
+
+```yaml
+operation: copy
+operation_config:
+    target_column: mr_reportDate
+    target_value: "The report date is {reportDate}"
+    source_table: measures
+    method: use_source_rows | exact
+```
+
+# order_columns
+
+```yaml
+operation: order_columns
+operation_config:
+    column_order_regex: [ mr_reportDate, sm_siteID, sm_sampleMat, co_contactID, compartment, specimen, fraction_analysed, measure, unit, aggregation, index, .* ]
+```
+
+The `order_columns` operation reorders the columns in the output table. The list of strings `column_order_regex` specifies the order of the columns. These are regular expressions that are applied to all columns. Full matches must occur in order for a regular expression to match a column name.
+
+If an exact match occurs (eg. the column `mr_reportDate` matching the regular expression `mr_reportDate`) then the column is placed in the position of that match. Otherwise, if no exact match occurs then the position of a wildcard match is used. If multiple columns match a wildcard then those columns are sorted alphabetically for consistency. If no match occurs then the column is placed at the end. For example, if a table has a column `mr_reportDate`, `mr_specimen`, `mr_aggregation`, and `sm_sampleMat`, and the following configuration is used:
+
+```yaml
+operation: order_columns
+operation_config:
+    column_order_regex: [ mr_specimen, mr_.*, mr_aggregation ]
+```
+
+Then the columns will be reordered so that `mr_specimen` is first, `mr_reportDate` is second, `mr_aggregation` is third, and `sm_sampleMat` is last.
+
+# pivot_longer
+
+```yaml
+operation: pivot_longer
+operation_config:
+    match_column_values: ([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^_]+)_value
+    match_skip_values: [ hCr, hSp, hFr, hMr, hUn, [ hAg, hAG ], hIn ]
+    target_columns: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
+    target_value_column: value
+    source_table: measures
+    method: new_rows # new_rows | existing_rows
+```
+
+The `pivot_longer` operation pivots individual input columns into individual output rows. It is the inverse of the `pivot_wider` operation.
+
+From the input rows (of the input table specified by `source_table`) `pivot_longer` finds any column that fully matches the regular expression specified in `match_column_values`. The regular expression must match the full column name, not just a part of it. It then takes the captures in the regular expression and assigns them to the columns (in order) specified in `target_columns`. In the `target_columns` field a value of `NULL` can be used if that capture should be ignored.  It also takes the value in the input table found in the matched column and assigns it to the column specified in `target_value_column`. Using the input row below as an example:
+
+```{r, echo=FALSE} 
+mdtable_list(list(
+    date = "2024-12-01",
+    wat_sa_liq_covN1_gcL_me_1_value = "40",
+    wat_sa_liq_pmmov_gcL_me_1_value = "45",
+    wat_sa_liq_ph_unitless_me_1_value = "6.1"
+))
+```
+
+All columns except for the `date` column match the regular expression. The first column that matches is `wat_sa_liq_covN1_gcL_me_1_value`, with the first regular expression capture being `wat`, the second `sa`, the third `liq`, and so on. Using `target_columns` to assign these captures to columns, and assigning the value in the matched column to the column specified by `target_value_column`, we obtain the following row:
+
+```{r, echo=FALSE}
+mdtable_list(list(
+    compartment = "wat",
+    specimen = "sa",
+    fraction_analysed = "liq",
+    measure = "covN1",
+    unit = "gcL",
+    aggregation = "me",
+    index = "1",
+    value = "40"
+))
+```
+
+Repeating this with the other columns that match the regular expression, we obtain:
+
+```{r, echo=FALSE}
+mdtable_list(list(
+    compartment = c("wat", "wat", "wat"),
+    specimen = c("sa", "sa", "sa"),
+    fraction_analysed = c("liq", "liq", "liq"),
+    measure = c("covN1", "pmmov", "ph"),
+    unit = c("gcL", "gcL", "unitless"),
+    aggregation = c("me", "me", "me"),
+    index = c("1", "1", "1"),
+    value = c("40", "45", "6.1")
+))
+```
+
+The `match_skip_values` field specifies values of captures that should result in skipping a pivot longer operation for a matched column. This list can have elements that are either strings or sub-lists of strings. If an element is a string then matching that string to the capture for that index will skip the operation. If an element is a sub-list then matching any of the strings in the sub-list will skip the operation. For example, in the example given at the start of this section, if the sixth capture (for `aggregation`) is either `hAg` or `hAG` then the pivot longer operation will be skipped. Use a value of `NULL` if there are no skip matches for that capture.
+
+The `method` field specifies how the output table is populated. If it is `new_rows` then each pivot will result in a new row. If it is `existing_rows` then no new rows are created (with one exception, see below), instead the values are pivoted into the existing rows (possibly overwriting values in those rows). With `existing_rows`, the rows used for pivoting are the [source rows](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) assigned to each existing output row. The one exception for `existing_rows` is if the output table is currently empty, in which case pivoting longer behaves as `new_rows` until a single pivot is complete.
+
+# pivot_wider
+
+```yaml
+operation: pivot_wider
+operation_config:
+    target_column: "{compartment}_{specimen}_{fraction_analysed}_{measure}_{unit}_{aggregation}_{index}_value"
+    source_table: measures
+    source_column: value
+    method: stack # stack | stack_no_new_rows | existing_rows
+```
+
+The `pivot_wider` operation pivots individual input rows into individual output columns. It is the inverse of the `pivot_longer` operation. When mapping a single input row to a column we take the values in various columns of the input row to form a new column name (specified by `target_column`). We then set the target value to the value found in the `source_column` column.
+
+The `method` key specifies how new or existing rows are created or populated in the output. `stack` fills the column in the output table from top to bottom, starting with the first empty row, and adding new rows if required. `stack_no_new_rows` also fills the column in the output table from top to bottom, starting with the first empty row, but if there are more values to stack than available existing output rows we end and do not create new rows. `existing_rows` will only populate existing rows, starting from top to bottom, and will also use the [source rows](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) attached to each output row as the source of data.
+
+Using the example configuration above and applying it to the following rows:
+
+```{r, echo=FALSE}
+mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv")
+```
+
+We will first pivot the first row into a single column. Using `target_column` we construct the new column name to be `wat_sa_liq_covN1_gcL_me_1_value`. We then copy the value found in the `source_column` column of the table `source_table`, which is 40. We repeat this process for rows two and three to obtain:
+
+```{r, echo=FALSE} 
+mdtable_list(list(
+    wat_sa_liq_covN1_gcL_me_1_value = "40",
+    wat_sa_liq_pmmov_gcL_me_1_value = "45",
+    wat_sa_liq_ph_unitless_me_1_value = "6.1"
+))
+```
+
+# set
+
+```yaml
+operation: set
+operation_config:
+    target_column: firstName
+    target_value: Martin
+    target_index: all           # 'all', int, or List[int], default: 'all'
+```
+
+The `set` operation assigns predefined values to columns in the output rows. If the output currently has more than one row the row index to copy the value to can be set with the `target_index` key, which is a 0-based index. `target_index` can also be an array of integers to specify multiple row indices to set. If `target_index` is not specified, or `all` is specified, then all rows are set. The default value is `all`.
+
+To avoid having to enter many separate `set` operations, multiple `set` operations can be specified using arrays for `target_column` and `target_value`. The example below sets the `organizationID` column in the output rows to `ohriOrg123`, `firstName` to `Martin`, `lastName` to `Wellman`, and `email` to `mwellman@example.org`:
+
+```yaml
+operation: set
+operation_config:
+    target_column: [ organizationID, firstName, lastName, email ]
+    target_value: [ ohriOrg123, Martin, Wellman, mwellman@example.org ]
+```
+
+# sort_rows
+
+```yaml
+operation: sort_rows
+operation_config:
+    sort_by: [ date, sampleID ]
+    order: ascending
+```
+
+The `sort_rows` operation sorts all rows according to one or more columns. This operation is typically performed as a post operation (in the `post_operations` key for the table, rather than with the `operations` key). It can be performed in the `operations` key but the sorting will only be performed on the current set of output rows, which is just a subset of the final output table. The configuration's `sort_by` field can be a single column name, or a list of column names to sort by. If this is a list then earlier columns take precedence in sorting. ie. We sort the whole table by the last column in the list first, and the first column in the list last.

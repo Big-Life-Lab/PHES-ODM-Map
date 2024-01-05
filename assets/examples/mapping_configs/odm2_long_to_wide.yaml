@@ -1,0 +1,56 @@
+metadata:
+    title: ODM 2.0 Long to Wide
+    version: 0.0.1
+    author: Martin Wellman
+    contact: mwellman@ohri.ca
+    links: https://phes-odm.org
+    last_modified: 2023-12-18
+
+tables:
+    -   output_table: out_measures
+        main_inputs:
+            input_table: measures
+            input_name: in_measures
+            group_by: [ date, sampleID ]
+        other_inputs:
+            -   input_table: samples
+                match: 
+                    # Include rows in samples table where samples["sampleID"] == in_measures["sampleID"]
+                    input_column: [ date, sampleID ]
+                    match_table: in_measures
+                    match_column: [ date, sampleID ]
+            -   input_table: contacts
+                match:
+                    # Include rows in contacts table where contacts["contactID"] == in_measures["contactID"]
+                    input_column: contactID
+                    match_table: in_measures
+                    match_column: contactID
+        operations:
+            -   operation: pivot_wider
+                operation_config:
+                    target_column: "{compartment}_{specimen}_{fraction_analysed}_{measure}_{unit}_{aggregation}_{index}_value"
+                    source_table: in_measures
+                    source_column: value
+                    method: stack # stack | stack_no_new_rows | existing_rows
+            -   operation: copy
+                operation_config:
+                    target_column: mr_reportDate
+                    source_table: in_measures
+                    source_column: reportDate
+            -   operation: copy
+                operation_config:
+                    target_column: [ sm_siteID, sm_sampleMat, co_contactID ]
+                    source_table: [ samples, samples, contacts ]
+                    source_column: [ siteID, saMaterial, contactID ]
+        post_operations:
+            -   operation: order_columns
+                operation_config:
+                    column_order_regex: [ mr_reportDate, sm_siteID, sm_sampleMat, co_contactID, compartment, specimen, fraction_analysed, measure, unit, aggregation, index, .* ]
+            -   operation: sort_rows
+                operation_config:
+                    sort_by: [ mr_reportDate, sm_siteID, measure, index ]
+
+save_output:
+    output_tables:
+        -   table_name: out_measures
+            save_as: measures

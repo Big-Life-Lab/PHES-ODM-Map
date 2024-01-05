@@ -1,0 +1,25 @@
+---
+title: Implementation Details
+toc: true
+toc-depth: 2
+---
+
+# Introduction
+
+This section describes more detailed behavior of mapping.
+
+# Assigning Source Table and Source Row Numbers
+
+During mapping, multiple rows can act as inputs (eg. for pivoting wider we might group the input by date, resulting in multiple input rows for each date). As well, some operations might create multiple output rows (eg. pivoting longer). These output rows might be constructed from possibly one or multiple input rows. Because of this, we need to keep track of which input row was used in constructing which output row, so that operations further down the chain of operations know which input row to use for each output row (of course this depends on what the operation does).
+
+In order to accomplish this, operations such as `pivot_wider` and `pivot_longer` assign (or attaches) the source row number to each output row that it populates or creates (they also assign the source table name, but for clarity we ignore this for now). The figure below shows an example where source row numbers are assigned:
+
+![Figure 4: Assigning source rows used to create each row with a `pivot_longer` operation](assets/example_assign_source_rows.png)
+
+Below is an extension of the previous example, with a `copy` operation added at the end where the assigned source rows are used to determine which rows to copy from in the input:
+
+![Figure 5: Using previously assigned source rows to determine which rows to `copy` from in the input](assets/example_reference_source_rows.png)
+
+In some cases, multiple operations may each assign their own (and possibly different) source row numbers to the same output row. If this occurs, the result is an array of source rows representing multiple sources. Typically an operation that extracts the source row for an output row will use the first assigned one in the array.
+
+Assigning multiple *different* source rows is generally not encouraged. If this occurs, it is recommended that either the mapping configuration file be changed to avoid this, or the implementation of an operation be changed to avoid this behavior.
