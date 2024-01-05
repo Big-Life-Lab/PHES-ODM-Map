@@ -28,11 +28,10 @@ tables:
         operations:
             -   operation: pivot_wider
                 operation_config:
-                    target_column_sources: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
-                    target_column_separator: _
-                    target_column_suffix: _value
+                    target_column: "{compartment}_{specimen}_{fraction_analysed}_{measure}_{unit}_{aggregation}_{index}_value"
                     source_table: in_measures
                     source_column: value
+                    method: stack # stack | stack_no_new_rows | existing_rows
             -   operation: copy
                 operation_config:
                     target_column: mr_reportDate
