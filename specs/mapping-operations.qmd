@@ -1,15 +1,15 @@
 ---
+title: Mapping Operations
 toc: true
 toc-depth: 2
-css: assets/styles.css
 ---
 
 ```{r, echo=FALSE, eval=TRUE, file="../R/doc_mdtables.R"}
 ```
 
-# Mapping operations
+# Introduction
 
-This document lists all operations allowable in a mapping configuration file. For details on the mapping configuration file see the [Mapping Configuration Files](mapping-configs.html) document.
+This section lists all operations allowable in a mapping configuration file. For details on the mapping configuration file see [Mapping Configuration Files](mapping-configs.qmd). With these operations, the source or input tables only contain the rows for the current group being processed. If the `group_by` key is not specified for the `main_inputs` table, then each source/input table processed by the operations will only have one row.
 
 # copy
 
@@ -19,10 +19,11 @@ operation_config:
     target_column: mr_reportDate
     source_table: measures
     source_column: reportDate
-    target_index: all           # 'all', int, or List[int], default: 'all'
+    cast: None # int | float | str | date | datetime
+    method: use_source_rows # use_source_rows | exact
 ```
 
-The `copy` operation copies a value from a column in the source table to a column in the output table. If the output currently has more than one row the row index to copy the value to can be set with the `target_index` key, which is a 0-based index. `target_index` can also be an array of integers to specify multiple row indices to copy to. If `target_index` is not specified, or `all` is specified, then all rows are copied to. The default value is `all`.
+The `copy` operation will copy one or more columns from the source table to the target table, optionally format the value(s), and optionally cast it to a specified type. The `method` key specifies which source rows are used for copying. For a method of `use_source_rows`, if an intermediate output table is already created, it will use the [source row numbers](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) assigned to each of the output table rows. If an intermediate output table is not already created, it will copy all the rows from the current source table. For a method of `exact`, all source rows are copied in order, populating the output table from top to bottom and creating new rows if required.
 
 To avoid having to enter many separate `copy` operations, multiple `copy` operations can be specified using arrays for `target_column`, `source_table`, and `source_column`. The example below copies `samples["siteID"]` to the output's `sm_siteID` column, `samples["saMaterial"]` to the output's `sm_sampleMat` column, and `contacts["contactID"]` to the output's `co_contactID` column:
 
@@ -34,7 +35,16 @@ operation_config:
     source_column: [ siteID, saMaterial, contactID ]
 ```
 
-If multiple output rows exist, then the `copy` operation will cycle through the values in the input rows for each subsequent output row. This ensures that we maintain the property that output row i corresponds to input row i mod n (i % n), where n is the number of input rows.
+To combine multiple columns or to create a derived value, the `target_value` key can be used:
+
+```yaml
+operation: copy
+operation_config:
+    target_column: mr_reportDate
+    target_value: "The report date is {reportDate}"
+    source_table: measures
+    method: use_source_rows | exact
+```
 
 # order_columns
 
@@ -46,7 +56,7 @@ operation_config:
 
 The `order_columns` operation reorders the columns in the output table. The list of strings `column_order_regex` specifies the order of the columns. These are regular expressions that are applied to all columns. Full matches must occur in order for a regular expression to match a column name.
 
-If an exact match occurs (eg. the column `mr_reportDate` matching the regular expression `mr_reportDate`) then the column is placed in the index position of that match. Otherwise, if no exact match occurs then the index position of a wildcard match is used. If multiple columns match a wildcard then those columns are sorted alphabetically for consistency. If no match occurs then the column is placed at the end. For example, if a table has a column `mr_reportDate`, `mr_specimen`, `mr_aggregation`, and `sm_sampleMat`, and the following configuration is used:
+If an exact match occurs (eg. the column `mr_reportDate` matching the regular expression `mr_reportDate`) then the column is placed in the position of that match. Otherwise, if no exact match occurs then the position of a wildcard match is used. If multiple columns match a wildcard then those columns are sorted alphabetically for consistency. If no match occurs then the column is placed at the end. For example, if a table has a column `mr_reportDate`, `mr_specimen`, `mr_aggregation`, and `sm_sampleMat`, and the following configuration is used:
 
 ```yaml
 operation: order_columns
@@ -66,6 +76,7 @@ operation_config:
     target_columns: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
     target_value_column: value
     source_table: measures
+    method: new_rows # new_rows | existing_rows
 ```
 
 The `pivot_longer` operation pivots individual input columns into individual output rows. It is the inverse of the `pivot_wider` operation.
@@ -81,7 +92,7 @@ mdtable_list(list(
 ))
 ```
 
-All columns except for the `date` column match the regular expression. The first column that matches is `wat_sa_liq_covN1_gcL_me_1_value`, with the first regular expression capture being `wat`, the second `sa`, the third `liq`, and so on. Using `target_columns` to assign these captures to column values, and assigning the source value to the column specified by `target_value_column`, we obtain the following row:
+All columns except for the `date` column match the regular expression. The first column that matches is `wat_sa_liq_covN1_gcL_me_1_value`, with the first regular expression capture being `wat`, the second `sa`, the third `liq`, and so on. Using `target_columns` to assign these captures to columns, and assigning the value in the matched column to the column specified by `target_value_column`, we obtain the following row:
 
 ```{r, echo=FALSE}
 mdtable_list(list(
@@ -113,25 +124,22 @@ mdtable_list(list(
 
 The `match_skip_values` field specifies values of captures that should result in skipping a pivot longer operation for a matched column. This list can have elements that are either strings or sub-lists of strings. If an element is a string then matching that string to the capture for that index will skip the operation. If an element is a sub-list then matching any of the strings in the sub-list will skip the operation. For example, in the example given at the start of this section, if the sixth capture (for `aggregation`) is either `hAg` or `hAG` then the pivot longer operation will be skipped. Use a value of `NULL` if there are no skip matches for that capture.
 
-When running `pivot_longer`, each matched column will result in populating a different output row, starting at output row index 0. If rows already exist in the output, we will populate those existing rows first, one at a time. If there are not enough output rows, then new output rows will be created. When creating the new rows the last pre-existing row in the output is broadcast down to populate any columns that are not populated by the `pivot_longer` operation (eg. if in the last pre-existing output row a `date` column is already present and has a value of `2024-12-01`, then any new row created by `pivot_longer` will also have a `date` of `2024-12-01`).
-
-When pivoting longer, once a column to pivot has been identified, we pivot all input rows in order for that particular column, appending an additional output row for each pivoted input row. Only after all input rows are pivoted for the column do we proceed to the next column for pivoting. This ensures that we maintain the property that output row i corresponds to input row i mod n (i % n), where n is the number of input rows.
+The `method` field specifies how the output table is populated. If it is `new_rows` then each pivot will result in a new row. If it is `existing_rows` then no new rows are created (with one exception, see below), instead the values are pivoted into the existing rows (possibly overwriting values in those rows). With `existing_rows`, the rows used for pivoting are the [source rows](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) assigned to each existing output row. The one exception for `existing_rows` is if the output table is currently empty, in which case pivoting longer behaves as `new_rows` until a single pivot is complete.
 
 # pivot_wider
 
 ```yaml
 operation: pivot_wider
 operation_config:
-    target_column_sources: [ compartment, specimen, fraction_analysed, measure, unit, aggregation, index ]
-    target_column_separator: _
-    target_column_suffix: _value
+    target_column: "{compartment}_{specimen}_{fraction_analysed}_{measure}_{unit}_{aggregation}_{index}_value"
     source_table: measures
     source_column: value
+    method: stack # stack | stack_no_new_rows | existing_rows
 ```
 
-The `pivot_wider` operation pivots individual input rows into individual output columns. It is the inverse of the `pivot_longer` operation. When mapping a single input row to a column we take the values in various columns of the input row (specified by `target_column_sources`), concatenate those values together as strings to construct the new output column name (separated by `target_column_separator`), optionally append a prefix or suffix to the name (specified by `target_column_prefix` or `target_column_suffix`), and then copy over a value from the input row (in the column specified by `source_column`) to the new column.
+The `pivot_wider` operation pivots individual input rows into individual output columns. It is the inverse of the `pivot_longer` operation. When mapping a single input row to a column we take the values in various columns of the input row to form a new column name (specified by `target_column`). We then set the target value to the value found in the `source_column` column.
 
-In `target_column_sources`, a dictionary value of the form `{ constant: hAg }` can be specified to use the constant string `hAg` in the column name, rather than a value retrieved from the input.
+The `method` key specifies how new or existing rows are created or populated in the output. `stack` fills the column in the output table from top to bottom, starting with the first empty row, and adding new rows if required. `stack_no_new_rows` also fills the column in the output table from top to bottom, starting with the first empty row, but if there are more values to stack than available existing output rows we end and do not create new rows. `existing_rows` will only populate existing rows, starting from top to bottom, and will also use the [source rows](mapping-behavior.qmd#assigning-source-table-and-source-row-numbers) attached to each output row as the source of data.
 
 Using the example configuration above and applying it to the following rows:
 
@@ -139,25 +147,7 @@ Using the example configuration above and applying it to the following rows:
 mdtable_csv_file("../assets/examples/odm/measure-singledate-odmlong.csv")
 ```
 
-We will first pivot the first row into a single column. The values within the columns specified by `target_column_sources` are:
-
-```txt
-(wat, sa, liq, covN1, gcL, me, 1)
-```
-
-Using `target_column_separator` as the separator, we concatenate the values to obtain:
-
-```txt
-wat_sa_liq_covN1_gcL_me_1
-```
-
-Finally, we append the `target_column_suffix` to obtain:
-
-```txt
-wat_sa_liq_covN1_gcL_me_1_value
-```
-
-This is the column name in the output. Finally, we copy the value found in the `source_column` column of the table `source_table`, which is 40. We repeat this process for rows two and three to obtain:
+We will first pivot the first row into a single column. Using `target_column` we construct the new column name to be `wat_sa_liq_covN1_gcL_me_1_value`. We then copy the value found in the `source_column` column of the table `source_table`, which is 40. We repeat this process for rows two and three to obtain:
 
 ```{r, echo=FALSE} 
 mdtable_list(list(
