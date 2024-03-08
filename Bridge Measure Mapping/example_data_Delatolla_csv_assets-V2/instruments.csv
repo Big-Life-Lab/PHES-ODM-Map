@@ -1,0 +1,4 @@
+"instrumentID","datasetID","name","model","manufacturer","contactID","organizationID","descr","refLink","insType","insTypeOth","index","lastEdited","notes"
+"delShaker","Ottawa-1",NA,NA,NA,"delatollaLab","Ottawa-1","Centrifuge machine",NA,"ola",NA,NA,2024-02-05,NA
+"delCentri","Ottawa-1",NA,NA,NA,"delatollaLab","Ottawa-1","shaker tray machine",NA,"ola",NA,NA,2024-02-05,NA
+"delPCR","Ottawa-1","Delatolla - qPCR thermocycler","CFX Connect qPCR thermocycler","Bio-Rad","delatollaLab","Ottawa-1","The CFX Connect real-time PCR detection system offers two-target analysis, excellent thermal cycler specifications, and the same reliable performance as the CFX96 Touch™ real-time PCR detection system. The system incorporates innovative optical technologies with powerful software to provide maximal reliability and efficiency for all the real-time PCR needs.",NA,"ola",NA,NA,2024-02-05,NA

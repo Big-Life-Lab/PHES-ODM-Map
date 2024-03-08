@@ -1,0 +1,57 @@
+"Protocol.Step.ID","Method","Measure","Summary","Protocol.step.source.ID","Protocol.step.version","Reference.link","Organization.ID","Contact.ID","Instrument.ID","Value","Unit","Aggregation","Last.edited","Notes"
+"settle","solidSep",NA,"The 6 L, 24-hour composite PGS samples were first settled at 4°C for an hour",NA,1,"10.1016/j.watres.2020.116560","Ottawa-1","delatollaLab",NA,"graSet",NA,NA,"25/07/2023",NA
+"storage4",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116561","Ottawa-1","delatollaLab",NA,"4","cel","sin","25/07/2023",NA
+"time1",NA,"stoTime","NR",NA,1,"10.1016/j.watres.2020.116562","Ottawa-1","delatollaLab",NA,"1","hours","sin","25/07/2023",NA
+"pellet","retainedElement",NA,"NR",NA,1,"10.1016/j.watres.2020.116563","Ottawa-1","delatollaLab",NA,"solid",NA,NA,"25/07/2023",NA
+"liquid","retainedElement",NA,"NR",NA,1,"10.1016/j.watres.2020.116564","Ottawa-1","delatollaLab",NA,"liquid",NA,NA,"25/07/2023",NA
+"eluate","retainedElement",NA,"NR",NA,1,"10.1016/j.watres.2020.116565","Ottawa-1","delatollaLab",NA,"eluate",NA,NA,"25/07/2023",NA
+"filter1","solidSep",NA,"The supernatant was subsequently decanted and serially filtered through a 1.5 μm glass fiber filter (GFF) followed by a 0.45 μm GF6 mixed cellulose ester (MCE) filter (filtrate fraction)",NA,1,"10.1016/j.watres.2020.116566","Ottawa-1","delatollaLab",NA,"filt",NA,NA,"25/07/2023",NA
+"filter2","solidSep",NA,"The supernatant was subsequently decanted and serially filtered through a 1.5 μm glass fiber filter (GFF) followed by a 0.45 μm GF6 mixed cellulose ester (MCE) filter (filtrate fraction)",NA,1,"10.1016/j.watres.2020.116566","Ottawa-1","delatollaLab",NA,"filt",NA,NA,"25/07/2023",NA
+"resuspend","resuspension",NA,"An eluate fraction was then collected by passing 32 mL of elution buffer (0.05 M KH2PO4, 1.0 M NaCl, 0.1 % (v/v) Triton X-100, pH 9.2) through the spent filters",NA,1,"10.1016/j.watres.2020.116567","Ottawa-1","delatollaLab",NA,"elutionBuff",NA,NA,"25/07/2023",NA
+"vol32",NA,"vol","NR",NA,1,"10.1016/j.watres.2020.116568","Ottawa-1","delatollaLab",NA,"32","mL","sin","25/07/2023",NA
+"peg","methodConc",NA,"To concentrate viral particles, nucleic acids, and proteins, 32 mL of PGS or PCS was precipitated with polyethylene glycol (PEG) 8000 at a final concentration of 80 g/L and 0.3M g/L NaCl, pH 7.3 and in a final volume of 40 mL","comelliPEG",1,"10.1016/j.watres.2020.116569","Ottawa-1","delatollaLab",NA,"peg",NA,NA,"25/07/2023",NA
+"pegPH",NA,"pH","NR",NA,1,"10.1016/j.watres.2020.116570","Ottawa-1","delatollaLab",NA,"7.3","unitless","sin","25/07/2023",NA
+"volume40",NA,"vol","NR",NA,1,"10.1016/j.watres.2020.116571","Ottawa-1","delatollaLab",NA,"40","ml","sin","25/07/2023",NA
+"shaker160",NA,"shaker","Samples were then agitated at 4°C on an orbital shaker set at 160 RPM for a period of 12 to 17 hours, then centrifuged at 10,000 x g for 45 minutes at 4°C.",NA,1,"10.1016/j.watres.2020.116572","Ottawa-1","delatollaLab","delShaker","160","rpm","sin","25/07/2023",NA
+"time12",NA,"stoTime","NR",NA,1,"10.1016/j.watres.2020.116573","Ottawa-1","delatollaLab",NA,"12","hours","sin","25/07/2023",NA
+"storage4",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116574","Ottawa-1","delatollaLab",NA,"4","cel","sin","25/07/2023",NA
+"centrifuge","solidSep",NA,"NR",NA,1,"10.1016/j.watres.2020.116575","Ottawa-1","delatollaLab","delCentri","cent",NA,NA,"25/07/2023",NA
+"speed1000",NA,"centSpeed","NR",NA,1,"10.1016/j.watres.2020.116576","Ottawa-1","delatollaLab",NA,"10000","g","sin","25/07/2023",NA
+"minutes45",NA,"duration","NR",NA,1,"10.1016/j.watres.2020.116577","Ottawa-1","delatollaLab",NA,"45","minutes","sin","25/07/2023",NA
+"storage4",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116578","Ottawa-1","delatollaLab",NA,"4","cel","sin","25/07/2023",NA
+"pellet","retainedElement",NA,"NR",NA,1,"10.1016/j.watres.2020.116579","Ottawa-1","delatollaLab",NA,"solid",NA,NA,"25/07/2023",NA
+"centrifuge","solidSep",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cent",NA,NA,"25/07/2023",NA
+"speed1000",NA,"centSpeed","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10000","g","sin","25/07/2023",NA
+"minutes10",NA,"stoTime","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10","minutes","sin","25/07/2023",NA
+"storage4",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"4","cel","sin","25/07/2023",NA
+"pellet","retainedElement",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"solid",NA,NA,"25/07/2023",NA
+"storageNeg80",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"-80","cel","sin","25/07/2023",NA
+"qiagenExtract","extraction",NA,"Deviations from the manufacturer’s recommended protocol: i) 200 mg of sample pellet was added to the initial extraction step in place of 200 μL of liquid sample, and ii) the optional phenol-chloroform mixture addition to the lysis buffer was substituted with Trizol LS reagent (ThermoFisher, Ottawa, Canada) to maximize lysis of cells/virion encapsulated fragments and protect RNA prior to vortexing and centrifugation.",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"qgRneasyPwr",NA,NA,"25/07/2023","Deviations from the manufacturer’s recommended protocol: i) 200 mg of sample pellet was added to the initial extraction step in place of 200 μL of liquid sample, and ii) the optional phenol-chloroform mixture addition to the lysis buffer was substituted with Trizol LS reagent (ThermoFisher, Ottawa, Canada) to maximize lysis of cells/virion encapsulated fragments and protect RNA prior to vortexing and centrifugation."
+"rtqPCR","pcrmeth",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab","delPCR","sinProbeOne",NA,NA,"25/07/2023",NA
+"n1forward","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN1IDTFor",NA,NA,"25/07/2023",NA
+"n1reverse","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN1IDTRev",NA,NA,"25/07/2023",NA
+"n1probe","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN1IDTProbe",NA,NA,"25/07/2023",NA
+"tempVol",NA,"vol","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"1.5","uL","sin","25/07/2023",NA
+"nM500",NA,"conc","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"500","nM","sin","25/07/2023",NA
+"nM125",NA,"conc","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"125","nM","sin","25/07/2023",NA
+"finalVol10",NA,"finVol","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10","uL","sin","25/07/2023",NA
+"rtStep","pcrAct",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"rt",NA,NA,"25/07/2023",NA
+"temp50",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"50","cel","sin","25/07/2023",NA
+"time10",NA,"duration","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10","minutes","sin","25/07/2023",NA
+"polyStep","pcrAct",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"pa",NA,NA,"25/07/2023",NA
+"temp95",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"95","cel","sin","25/07/2023",NA
+"time10",NA,"duration","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10","minutes","sin","25/07/2023",NA
+"denatStep","pcrAct",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"denat",NA,NA,"25/07/2023",NA
+"temp95",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"95","cel","sin","25/07/2023",NA
+"time10s",NA,"duration","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"10","seconds","sin","25/07/2023",NA
+"annealStep","pcrAct",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"anneal",NA,NA,"25/07/2023",NA
+"temp60",NA,"temp","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"60","cel","sin","25/07/2023",NA
+"time30s",NA,"duration","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"30","seconds","sin","25/07/2023",NA
+"cycle45",NA,"cyNum","NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"45","unitless","sin","25/07/2023",NA
+"stdCurveDill","stdCurveMet",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"serDil",NA,NA,"25/07/2023",NA
+"n2forward","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN2IDTFor",NA,NA,"25/07/2023",NA
+"n2reverse","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN2IDTRev",NA,NA,"25/07/2023",NA
+"n2probe","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"cdcCovN2IDTProbe",NA,NA,"25/07/2023",NA
+"pmmvForward","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"pmmvABIFor",NA,NA,"25/07/2023",NA
+"pmmvReverse","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"pmmvABIRev",NA,NA,"25/07/2023",NA
+"pmmvProbe","primer",NA,"NR",NA,1,"10.1016/j.watres.2020.116580","Ottawa-1","delatollaLab",NA,"pmmvABIProbe",NA,NA,"25/07/2023",NA
